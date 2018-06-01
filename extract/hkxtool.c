@@ -17,6 +17,10 @@
 
 static int write_geometry(const char *in_filename, struct HKX_GEOMETRY *g)
 {
+  const char *p = strrchr(in_filename, '/');
+  if (p)
+    in_filename = p + 1;
+  
   size_t filename_len = strlen(in_filename);
   char *filename = malloc(filename_len + 4 + 1);
   if (! filename) {
@@ -27,6 +31,8 @@ static int write_geometry(const char *in_filename, struct HKX_GEOMETRY *g)
   strcat(filename, ".obj");
 
   int ret = hkx_write_obj(filename, g);
+  if (ret != 0)
+    printf("Can't write '%s'\n", filename);
   free(filename);
   return ret;
 }
@@ -35,6 +41,25 @@ static void extract_file(void *data, size_t size, const char *filename, struct H
 {
   if (hkx_read_geometry(g, data, size) != 0)
     printf("OUT OF MEMORY for geometry\n");
+}
+
+static void dump_index(void *data, size_t size)
+{
+  printf("\nItems in index:\n");
+  uint32_t off = 0;
+  while (off < size) {
+    uint32_t chunk_size = get_u32_be(data, off) & 0x00ffffff;
+    if (memcmp((char *) data + off + 4, "ITEM", 4) == 0) {
+      printf("type     offset   count\n");
+      for (uint32_t item = 0; 8 + 12*item + 8 <= chunk_size; item++) {
+        uint32_t item_type  = get_u32_le(data, off + 8 + 12*item + 0);
+        uint32_t item_off   = get_u32_le(data, off + 8 + 12*item + 4);
+        uint32_t item_count = get_u32_le(data, off + 8 + 12*item + 8);
+        printf("%08x %08x %08x\n", item_type, item_off, item_count);
+      }
+    }
+    off += chunk_size;
+  }
 }
 
 static void dump_hkx(void *data, size_t size, const char *filename)
@@ -50,6 +75,11 @@ static void dump_hkx(void *data, size_t size, const char *filename)
     printf("\n");
     printf("%08x %.4s len=%u (0x%x)\n", off, (char *) data + off + 4, chunk_size - 8, chunk_size - 8);
     dump_mem((char *) data + off + 8, chunk_size - 8, off + 8);
+
+    if (memcmp((char *) data + off + 4, "INDX", 4) == 0) {
+      dump_index(data + off + 8, chunk_size - 8);
+    }
+    
     off += chunk_size;
   }
   if (off != size)
@@ -98,11 +128,11 @@ static int process_single_file(const char *filename, int mode)
   struct HKX_GEOMETRY g;
   hkx_init_geometry(&g);
   process_hkx(data, size, filename, mode, &g);
-  write_geometry(filename, &g);
+  int ret = write_geometry(filename, &g);
   hkx_free_geometry(&g);
   
   free(data);
-  return 0;
+  return ret;
 }
 
 static int process_bhd(const char *filename, int mode)
@@ -131,10 +161,10 @@ static int process_bhd(const char *filename, int mode)
     }
   }
   
-  write_geometry(filename, &g);
+  int ret = write_geometry(filename, &g);
   hkx_free_geometry(&g);
   bhd_close(&f);
-  return 0;
+  return ret;
 }
 
 static int read_cmdline(int argc, char *argv[])

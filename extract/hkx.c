@@ -7,6 +7,7 @@
 #include "hkx.h"
 #include "reader.h"
 
+#define HKX_TYPE_MAT 0x1000004b
 #define HKX_TYPE_VTX 0x20000016
 #define HKX_TYPE_IND 0x2000000d
 
@@ -93,25 +94,34 @@ int hkx_read_geometry(struct HKX_GEOMETRY *restrict g, const void *restrict data
   }
 
   uint32_t n_vtx_start = 0;
+  float mat[16];
 
   off = indx_off;
   while (off < indx_off+indx_size) {
     uint32_t chunk_size = get_u32_be(data, off) & 0x00ffffff;
     char *magic = (char *) data + off + 4;
     if (memcmp(magic, "ITEM", 4) == 0) {
-      for (uint32_t item = 0; 12*item < chunk_size; item++) {
+      for (uint32_t item = 0; 8 + 12*item + 8 <= chunk_size; item++) {
         uint32_t item_type  = get_u32_le(data, off + 8 + 12*item + 0);
         uint32_t item_off   = get_u32_le(data, off + 8 + 12*item + 4);
         uint32_t item_count = get_u32_le(data, off + 8 + 12*item + 8);
         uint32_t n_ind = 0;
         
         switch (item_type) {
+        case HKX_TYPE_MAT:
+          memcpy(mat, (char *) data + data_off + item_off + 0x170, 16 * sizeof(float));
+          break;
+          
         case HKX_TYPE_VTX:
           if (ensure_vtx_space(g, g->n_vtx + item_count) != 0)
             return 1;
           n_vtx_start = g->n_vtx;
           for (uint32_t i = 0; i < item_count; i++) {
-            memcpy(g->vtx + 3 * (g->n_vtx + i), (char *) data + data_off + item_off + 4 * sizeof(float) * i, 3 * sizeof(float));
+            float v[3];
+            memcpy(v, (char *) data + data_off + item_off + 4 * sizeof(float) * i, 3 * sizeof(float));
+            g->vtx[3 * (g->n_vtx + i) + 0] = v[0]*mat[ 0] + v[1]*mat[ 4] + v[2]*mat[ 8] + mat[12];
+            g->vtx[3 * (g->n_vtx + i) + 1] = v[0]*mat[ 1] + v[1]*mat[ 5] + v[2]*mat[ 9] + mat[13];
+            g->vtx[3 * (g->n_vtx + i) + 2] = v[0]*mat[ 2] + v[1]*mat[ 6] + v[2]*mat[10] + mat[14];
           }
           g->n_vtx += item_count;
           break;
