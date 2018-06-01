@@ -94,14 +94,14 @@ int hkx_read_geometry(struct HKX_GEOMETRY *restrict g, const void *restrict data
   }
 
   uint32_t n_vtx_start = 0;
-  float mat[16];
+  float mat[16] = { 0.0 };
 
   off = indx_off;
   while (off < indx_off+indx_size) {
     uint32_t chunk_size = get_u32_be(data, off) & 0x00ffffff;
     char *magic = (char *) data + off + 4;
     if (memcmp(magic, "ITEM", 4) == 0) {
-      for (uint32_t item = 0; 8 + 12*item + 8 <= chunk_size; item++) {
+      for (uint32_t item = 0; 8 + 12*(item+1) <= chunk_size; item++) {
         uint32_t item_type  = get_u32_le(data, off + 8 + 12*item + 0);
         uint32_t item_off   = get_u32_le(data, off + 8 + 12*item + 4);
         uint32_t item_count = get_u32_le(data, off + 8 + 12*item + 8);

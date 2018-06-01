@@ -51,7 +51,7 @@ static void dump_index(void *data, size_t size)
     uint32_t chunk_size = get_u32_be(data, off) & 0x00ffffff;
     if (memcmp((char *) data + off + 4, "ITEM", 4) == 0) {
       printf("type     offset   count\n");
-      for (uint32_t item = 0; 8 + 12*item + 8 <= chunk_size; item++) {
+      for (uint32_t item = 0; 8 + 12*(item+1) <= chunk_size; item++) {
         uint32_t item_type  = get_u32_le(data, off + 8 + 12*item + 0);
         uint32_t item_off   = get_u32_le(data, off + 8 + 12*item + 4);
         uint32_t item_count = get_u32_le(data, off + 8 + 12*item + 8);
