@@ -49,7 +49,7 @@ static void dump_hkx(void *data, size_t size, const char *filename)
     uint32_t chunk_size = get_u32_be(data, off) & 0x00ffffff;
     printf("\n");
     printf("%08x %.4s len=%u (0x%x)\n", off, (char *) data + off + 4, chunk_size - 8, chunk_size - 8);
-    dump_mem((char *) data + off + 8, chunk_size - 8);
+    dump_mem((char *) data + off + 8, chunk_size - 8, off + 8);
     off += chunk_size;
   }
   if (off != size)

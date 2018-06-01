@@ -113,7 +113,7 @@ static void process_file(const char *filename, void *data, size_t size, int mode
     
   case MODE_DUMP:
     printf("-> %s:\n", filename);
-    dump_mem(data, size);
+    dump_mem(data, size, 0);
     break;
   }
 
