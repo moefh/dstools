@@ -143,12 +143,12 @@ static int read_cmdline(int argc, char *argv[])
     printf("USAGE: hkxtool commands file.hkx\n");
     printf("       hkxtool commands file.hkxbhd\n");
     printf("\n");
-    printf("Extract and list the contents of hkx or hkxbhd/hkxbnd files.");
+    printf("Extract and list the contents of hkx or hkxbhd/hkxbdt files.\n");
     printf("\n");
-    printf("use one of these commands:\n");
+    printf("Use one of these commands:\n");
     printf("  l    list files\n");
     printf("  d    dump files (hexdump)\n");
-    printf("  x    extract files\n");
+    printf("  x    extract geometry from files\n");
     exit(1);
   }
 

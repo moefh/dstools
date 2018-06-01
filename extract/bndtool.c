@@ -126,14 +126,14 @@ static int read_cmdline(int argc, char *argv[], int *p_flags)
   if (argc != 3) {
     printf("USAGE: bndtool commands file.bnd\n");
     printf("\n");
-    printf("Extract and list the contents of bnd files (BND3 format).");
+    printf("Extract and list the contents of bnd files (BND3 format).\n");
     printf("\n");
-    printf("use one of these commands:\n");
+    printf("Use one of these commands:\n");
     printf("  l    list files\n");
     printf("  d    dump files (hexdump)\n");
     printf("  x    extract files\n");
     printf("\n");
-    printf("optional flags for commands:\n");
+    printf("Optional flags for commands:\n");
     printf("  i    inflate extracted or dumped files (if applicable)\n");
     exit(1);
   }
