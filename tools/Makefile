@@ -8,7 +8,8 @@ LIBS =
 all: hexdump binfloat
 
 clean:
-	rm -f *.o *.exe
+	-rm -f *.o *.exe
+	-rm -f hexdump binfloat
 
 hexdump: hexdump.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)

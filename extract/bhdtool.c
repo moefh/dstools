@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/stat.h> /* for mkdir() and stat() */
 
 #include "bhd.h"
 #include "dcx.h"
@@ -30,25 +29,6 @@ static int write_file(const char *filename, void *data, size_t data_size)
   fclose(f);
   return 0;
 }
-
-#if 0
-static int mkdir_p(char *dir)
-{
-  char *slash = strrchr(dir, '\\');
-  if (slash) {
-    *slash = '\0';
-    int ret = mkdir_p(dir);
-    *slash = '\\';
-    if (ret != 0)
-      return ret;
-  }
-
-  struct stat st;
-  if (stat(dir, &st) == 0)
-    return 0;
-  return mkdir(dir);
-}
-#endif
 
 static void extract_file(const char *in_filename, void *data, size_t size, int inflated)
 {
@@ -172,7 +152,7 @@ static int read_cmdline(int argc, char *argv[], int *p_flags)
   }
 
   if (mode < 0) {
-    printf("At least one of 'x' or 'l' is required\n");
+    printf("At least one of 'x', 'l' or 'd' is required\n");
     exit(1);
   }
 

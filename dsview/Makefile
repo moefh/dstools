@@ -12,6 +12,7 @@ all: dsview
 
 clean:
 	-rm -f *.o *.exe
+	-rm -f dsview
 
 dsview: $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
