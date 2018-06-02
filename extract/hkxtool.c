@@ -20,6 +20,9 @@ static int write_geometry(const char *in_filename, struct HKX_GEOMETRY *g)
   const char *p = strrchr(in_filename, '/');
   if (p)
     in_filename = p + 1;
+  p = strrchr(in_filename, '\\');
+  if (p)
+    in_filename = p + 1;
   
   size_t filename_len = strlen(in_filename);
   char *filename = malloc(filename_len + 4 + 1);
