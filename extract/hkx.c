@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <limits.h>
 
 #include "hkx.h"
 #include "reader.h"
@@ -93,7 +94,7 @@ int hkx_read_geometry(struct HKX_GEOMETRY *restrict g, const void *restrict data
     off += chunk_size;
   }
 
-  uint32_t n_vtx_start = 0;
+  uint32_t n_vtx_start = UINT32_MAX;
   float mat[16] = { 0.0 };
 
   off = indx_off;
@@ -127,15 +128,20 @@ int hkx_read_geometry(struct HKX_GEOMETRY *restrict g, const void *restrict data
           break;
           
         case HKX_TYPE_IND:
+          if (n_vtx_start == UINT32_MAX) {
+            printf("* ERROR: indices without vertices\n");
+            return 1;
+          }
           n_ind = item_count/4*3;
           if (ensure_tri_space(g, g->n_ind + n_ind) != 0)
             return 1;
           for (uint32_t i = 0; 3*i < n_ind; i++) {
-            g->ind[g->n_ind + 3 * i + 0] = n_vtx_start + get_u16_le(data, data_off + item_off + (4 * i + 0) * sizeof(uint16_t));
+            g->ind[g->n_ind + 3 * i + 2] = n_vtx_start + get_u16_le(data, data_off + item_off + (4 * i + 0) * sizeof(uint16_t));
             g->ind[g->n_ind + 3 * i + 1] = n_vtx_start + get_u16_le(data, data_off + item_off + (4 * i + 1) * sizeof(uint16_t));
-            g->ind[g->n_ind + 3 * i + 2] = n_vtx_start + get_u16_le(data, data_off + item_off + (4 * i + 2) * sizeof(uint16_t));
+            g->ind[g->n_ind + 3 * i + 0] = n_vtx_start + get_u16_le(data, data_off + item_off + (4 * i + 2) * sizeof(uint16_t));
           }
           g->n_ind += n_ind;
+          n_vtx_start == UINT32_MAX;
           break;
         }
       }
