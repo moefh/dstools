@@ -4,7 +4,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <ctype.h>
+#include <limits.h>
 
 #include "model.h"
 #include "debug.h"
@@ -58,4 +58,22 @@ int load_model(struct model *model, const char *filename)
   free(model->vtx);
   free(model->indices);
   return 1;
+}
+
+int load_model_colors(const char *filename, void (*set_color)(int num, float *color), int max_colors)
+{
+  FILE *f = fopen(filename, "r");
+  if (! f)
+    return 0;
+  char line[256];
+  int num = 0;
+  while (num < max_colors && fgets(line, sizeof(line), f) != NULL) {
+    float color[3];
+    if (sscanf(line, "%f , %f , %f", &color[0], &color[1], &color[2]) == 3) {
+      set_color(num, color);
+      num++;
+    }
+  }
+  fclose(f);
+  return num;
 }

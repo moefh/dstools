@@ -10,6 +10,7 @@
 #include "matrix.h"
 #include "shader.h"
 #include "model.h"
+#include "dir.h"
 #include "mouse_camera.h"
 #include "key_camera.h"
 
@@ -51,33 +52,14 @@ static struct shader_program prog;
 
 struct model_def {
   float color[3];
-  const char *filename;
   struct model model;
   GLuint vtx_array_obj;
   GLuint vtx_buf_obj;
   GLuint index_buf_obj;
   int disable_draw;
 };
-static struct model_def models[] = {
-  { {0.0, 0.3, 0.6}, "maps/10-0 Depths.objc" },
-  { {0.0, 0.5, 0.4}, "maps/10-1 Undead Burg.objc" },
-  { {0.8, 0.7, 0.0}, "maps/10-2 Firelink Shrine.objc" },
-  { {1.0, 1.0, 1.0}, "maps/11-0 Painted World of Ariamis.objc" },
-  { {0.0, 0.8, 0.0}, "maps/12-0 Darkroot Garden+Basin.objc" },
-  { {1.0, 0.0, 1.0}, "maps/12-1 Oolacile.objc" },
-  { {0.3, 0.5, 0.0}, "maps/13-0 Catacombs.objc" },
-  { {0.3, 0.3, 0.0}, "maps/13-1 Tomb of the Giants.objc" },
-  { {0.0, 0.3, 0.4}, "maps/13-2 Ash Lake.objc" },
-  { {0.6, 0.4, 0.0}, "maps/14-0 Blighttown+Quelaags Domain.objc" },
-  { {0.5, 0.1, 0.1}, "maps/14-1 Demon Ruins+Lost Izalith.objc" },
-  { {0.4, 0.2, 0.0}, "maps/15-0 Sens Fortress.objc" },
-  { {0.9, 0.9, 0.0}, "maps/15-1 Anor Londo.objc" },
-  { {0.3, 0.3, 0.3}, "maps/16-0 New Londo Ruins+Valley of Drakes.objc" },
-  { {0.5, 0.6, 0.5}, "maps/17-0 Duke's Archive+Crystal Caves.objc" },
-  { {1.0, 1.0, 0.8}, "maps/18-0 Kiln of the first Flame.objc" },
-  { {0.6, 0.6, 0.5}, "maps/18-1 Undead Asylum.objc" },
-  { {}, NULL }
-};
+static struct model_def models[32];
+static int n_models;
 
 static int get_shader_attr_id(GLint *id, const char *name)
 {
@@ -128,15 +110,33 @@ static int init_shaders(void)
   return 0;
 }
 
-static int load_models(void)
+static void set_model_color(int n_model, float *color)
 {
-  for (int i = 0; models[i].filename != NULL; i++) {
+  memcpy(models[n_model].color, color, 3*sizeof(float));
+}
+
+static int init_models(void)
+{
+  char **filenames = dir_list_files("maps", ".objc");
+  if (! filenames) {
+    debug("* ERROR listing models directory\n");
+    return 1;
+  }
+
+  n_models = 0;
+  for (int i = 0; filenames[i] != NULL; i++) {
     struct model_def *def = &models[i];
-    if (load_model(&def->model, def->filename) != 0) {
-      debug("* ERROR loading model '%s'\n", def->filename);
+    if (++n_models > (int)(sizeof(models)/sizeof(models[0])))
+      break;
+
+    if (load_model(&def->model, filenames[i]) != 0) {
+      debug("* ERROR loading model '%s'\n", filenames[i]);
+      dir_free_files(filenames);
       return 1;
     }
 
+    def->color[0] = def->color[1] = def->color[2] = 1.0;
+    
     GL_CHECK(glGenVertexArrays(1, &def->vtx_array_obj));
     GL_CHECK(glBindVertexArray(def->vtx_array_obj));
     
@@ -154,6 +154,9 @@ static int load_models(void)
     GL_CHECK(glBindVertexArray(0));
   }
 
+  dir_free_files(filenames);
+  
+  load_model_colors("model_colors.txt", set_model_color, n_models);
   return 0;
 }
 
@@ -279,7 +282,7 @@ static void draw_screen(void)
   GL_CHECK(glUniformMatrix3fv(prog.uni_mat_normal, 1, GL_TRUE, prog.mat_normal));
   GL_CHECK(glUniform3fv(prog.uni_light_pos, 1, prog.light_pos));
 
-  for (int i = 0; models[i].filename != NULL; i++)
+  for (int i = 0; i < n_models; i++)
     draw_model(&models[i]);
 
   GL_CHECK(glUseProgram(0));
@@ -451,7 +454,7 @@ int main(int argc, char* argv[])
     goto err;
   
   debug("- Loading models...\n");
-  if (load_models() != 0)
+  if (init_models() != 0)
     goto err;
 
   debug("- Setting up view...\n");

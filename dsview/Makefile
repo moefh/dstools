@@ -4,7 +4,7 @@ CFLAGS = -O2 -Wall -Wextra -Wno-missing-field-initializers -Wno-unused-parameter
 LDFLAGS = -w -Wl,-subsystem,windows
 #LDFLAGS = 
 
-OBJS = main.o debug.o gl_error.o matrix.o shader.o model.o mouse_camera.o key_camera.o glad.o
+OBJS = main.o debug.o gl_error.o matrix.o dir.o shader.o model.o mouse_camera.o key_camera.o glad.o
 LIBS = -L$(DEVROOT)/lib -lglfw3 -lgdi32 -lopengl32 -lm
 #LIBS = -lglfw -lGL -ldl -lm
 
