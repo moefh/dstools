@@ -2,32 +2,12 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <ctype.h>
 
 #include "model.h"
 #include "gennormals.h"
-
-static const char *const model_files[] = {
-  "10-0 Depths.obj",
-  "10-1 Undead Burg.obj",
-  "10-2 Firelink Shrine.obj",
-  "11-0 Painted World of Ariamis.obj",
-  "12-0 Darkroot Garden+Basin.obj",
-  "12-1 Oolacile.obj",
-  "13-0 Catacombs.obj",
-  "13-1 Tomb of the Giants.obj",
-  "13-2 Ash Lake.obj",
-  "14-0 Blighttown+Quelaags Domain.obj",
-  "14-1 Demon Ruins+Lost Izalith.obj",
-  "15-0 Sens Fortress.obj",
-  "15-1 Anor Londo.obj",
-  "16-0 New Londo Ruins+Valley of Drakes.obj",
-  "17-0 Duke's Archive+Crystal Caves.obj",
-  "18-0 Kiln of the first Flame.obj",
-  "18-1 Undead Asylum.obj",
-  NULL
-};
-
+#include "dir.h"
 
 static void free_model(struct model *m)
 {
@@ -189,23 +169,35 @@ static int write_model(const struct model *model, const char *filename)
   return 1;
 }
 
-int main(void)
+int main(int argc, char *argv[])
 {
-  char filename[256];
-  struct model model;
+  if (argc != 3) {
+    printf("USAGE: genmap input_dir output_dir\n");
+    return 1;
+  }
+  const char *input_dir = argv[1];
+  const char *output_dir = argv[2];
   
+  char **model_files = dir_list_files(input_dir, ".obj");
+  if (! model_files) {
+    printf("* ERROR listing directory '%s'\n", input_dir);
+    return 1;
+  }
   for (int i = 0; model_files[i] != NULL; i++) {
+    char out_filename[256];
+    struct model model;
+    
     printf("- processing '%s'...\n", model_files[i]);
 
-    sprintf(filename, "in/%s", model_files[i]);
-    if (load_model(&model, filename) != 0) {
-      printf("* ERROR loading '%s'\n", filename);
+    if (load_model(&model, model_files[i]) != 0) {
+      printf("* ERROR loading '%s'\n", model_files[i]);
       return 1;
     }
 
-    sprintf(filename, "out/%sc", model_files[i]);
-    if (write_model(&model, filename) != 0) {
-      printf("* ERROR writing '%s'\n", filename);
+    char *filename = get_path_filename(model_files[i]);
+    snprintf(out_filename, sizeof(out_filename), "%s/%sc", output_dir, filename);
+    if (write_model(&model, out_filename) != 0) {
+      printf("* ERROR writing '%s'\n", out_filename);
       return 1;
     }
 

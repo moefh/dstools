@@ -7,7 +7,7 @@
 
 #include "model.h"
 
-#define MAX_TRI_PER_VERTEX 64
+#define MAX_TRI_PER_VERTEX 128
 
 struct vtx_info {
   int n_tri;
