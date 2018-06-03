@@ -13,8 +13,8 @@ clean:
 	-rm -f out/*.objc
 
 maps: genmap
-	./genmap in out
-	cp -v out/*.objc ../dsview/maps
+	-mkdir ..\dsview\maps
+	./genmap in ../dsview/maps
 
 genmap: $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)

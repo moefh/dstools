@@ -7,18 +7,21 @@
 
 #include "model.h"
 
-#define MAX_TRI_PER_VERTEX 128
+#define MAX_TRI_PER_VERTEX 64
 
 struct vtx_info {
   int n_tri;
+  int too_many;
   unsigned int tri[MAX_TRI_PER_VERTEX];
 };
 
 static int add_vtx_tri(struct vtx_info *vi, unsigned int vtx, unsigned int tri)
 {
   if (vi->n_tri >= MAX_TRI_PER_VERTEX) {
-    printf("* ERROR: vertex %u is in too many triangles!\n", vtx);
-    return 1;
+    if (! vi->too_many)
+      printf("* WARNING: vertex %u is in too many triangles!\n", vtx);
+    vi->too_many = 1;
+    return 0;
   }
   vi->tri[vi->n_tri++] = tri;
   return 0;
@@ -26,8 +29,10 @@ static int add_vtx_tri(struct vtx_info *vi, unsigned int vtx, unsigned int tri)
 
 static int calc_vtx_info(struct vtx_info *vtx_info, struct model *model)
 {
-  for (unsigned int vtx = 0; vtx < model->n_vtx; vtx++)
+  for (unsigned int vtx = 0; vtx < model->n_vtx; vtx++) {
     vtx_info[vtx].n_tri = 0;
+    vtx_info[vtx].too_many = 0;
+  }
     
   for (unsigned int tri = 0; tri < model->n_tri; tri++) {
     for (int i = 0; i < 3; i++) {
@@ -93,7 +98,7 @@ int gen_normals(struct model *model)
   for (unsigned int vtx = 0; vtx < model->n_vtx; vtx++) {
     float *normal = &model->normals[3*vtx];
     if (vtx_info[vtx].n_tri == 0) {
-      printf("* WARNING: vertex %u has no triangles!\n", vtx);
+      //printf("* WARNING: vertex %u has no triangles!\n", vtx);
       normal[0] = 0.0;
       normal[1] = 1.0;
       normal[2] = 0.0;
