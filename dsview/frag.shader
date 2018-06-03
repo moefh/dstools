@@ -9,11 +9,13 @@ uniform vec3 light_pos;
 
 void main() {
   vec3 light_dir = normalize(light_pos - frag_pos);
-  float diffuse = 0.3 + 0.7*max(dot(frag_normal, light_dir), 0.0);
+  //float diffuse = 0.3 + 0.7*max(dot(frag_normal, light_dir), 0.0);
+  float diffuse = 0.3 + 0.7*abs(dot(frag_normal, light_dir));
 
   vec3 view_dir = normalize(vec3(0.0,0.0,0.0) - frag_pos);
   vec3 reflect_dir = reflect(-light_dir, frag_normal);
-  float specular = 0.5 * pow(max(dot(view_dir, reflect_dir), 0.0), 32);
+  //float specular = 0.5 * pow(max(dot(view_dir, reflect_dir), 0.0), 32);
+  float specular = 0.5 * pow(abs(dot(view_dir, reflect_dir)), 32);
 
   frag = color * clamp(diffuse + specular, 0.0, 1.0);
 }
