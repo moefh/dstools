@@ -13,6 +13,7 @@
 #define HKX_TYPE_IND 0x2000000d
 
 #define REALLOC_CHUNK_SIZE 16384
+#define REMOVE_INVALID_TRIANGLES 1
 
 void hkx_init_geometry(struct HKX_GEOMETRY *g)
 {
@@ -129,19 +130,30 @@ int hkx_read_geometry(struct HKX_GEOMETRY *restrict g, const void *restrict data
           
         case HKX_TYPE_IND:
           if (n_vtx_start == UINT32_MAX) {
-            printf("* ERROR: indices without vertices\n");
-            return 1;
+            //printf("* ERROR: indices without vertices\n");
+            continue;
           }
           n_ind = item_count/4*3;
           if (ensure_tri_space(g, g->n_ind + n_ind) != 0)
             return 1;
           for (uint32_t i = 0; 3*i < n_ind; i++) {
+#if REMOVE_INVALID_TRIANGLES
+            uint32_t v0 = n_vtx_start + get_u16_le(data, data_off + item_off + (4 * i + 0) * sizeof(uint16_t));
+            uint32_t v1 = n_vtx_start + get_u16_le(data, data_off + item_off + (4 * i + 1) * sizeof(uint16_t));
+            uint32_t v2 = n_vtx_start + get_u16_le(data, data_off + item_off + (4 * i + 2) * sizeof(uint16_t));
+            if (v0 < g->n_vtx && v1 < g->n_vtx && v2 < g->n_vtx) {
+              g->ind[g->n_ind + 3 * i + 2] = v0;
+              g->ind[g->n_ind + 3 * i + 1] = v1;
+              g->ind[g->n_ind + 3 * i + 0] = v2;
+            }
+#else
             g->ind[g->n_ind + 3 * i + 2] = n_vtx_start + get_u16_le(data, data_off + item_off + (4 * i + 0) * sizeof(uint16_t));
             g->ind[g->n_ind + 3 * i + 1] = n_vtx_start + get_u16_le(data, data_off + item_off + (4 * i + 1) * sizeof(uint16_t));
             g->ind[g->n_ind + 3 * i + 0] = n_vtx_start + get_u16_le(data, data_off + item_off + (4 * i + 2) * sizeof(uint16_t));
+#endif
           }
           g->n_ind += n_ind;
-          n_vtx_start == UINT32_MAX;
+          n_vtx_start = UINT32_MAX;
           break;
         }
       }
