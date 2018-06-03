@@ -142,14 +142,14 @@ int hkx_read_geometry(struct HKX_GEOMETRY *restrict g, const void *restrict data
             uint32_t v1 = n_vtx_start + get_u16_le(data, data_off + item_off + (4 * i + 1) * sizeof(uint16_t));
             uint32_t v2 = n_vtx_start + get_u16_le(data, data_off + item_off + (4 * i + 2) * sizeof(uint16_t));
             if (v0 < g->n_vtx && v1 < g->n_vtx && v2 < g->n_vtx) {
-              g->ind[g->n_ind + 3 * i + 2] = v0;
+              g->ind[g->n_ind + 3 * i + 0] = v0;
               g->ind[g->n_ind + 3 * i + 1] = v1;
-              g->ind[g->n_ind + 3 * i + 0] = v2;
+              g->ind[g->n_ind + 3 * i + 2] = v2;
             }
 #else
-            g->ind[g->n_ind + 3 * i + 2] = n_vtx_start + get_u16_le(data, data_off + item_off + (4 * i + 0) * sizeof(uint16_t));
+            g->ind[g->n_ind + 3 * i + 0] = n_vtx_start + get_u16_le(data, data_off + item_off + (4 * i + 0) * sizeof(uint16_t));
             g->ind[g->n_ind + 3 * i + 1] = n_vtx_start + get_u16_le(data, data_off + item_off + (4 * i + 1) * sizeof(uint16_t));
-            g->ind[g->n_ind + 3 * i + 0] = n_vtx_start + get_u16_le(data, data_off + item_off + (4 * i + 2) * sizeof(uint16_t));
+            g->ind[g->n_ind + 3 * i + 2] = n_vtx_start + get_u16_le(data, data_off + item_off + (4 * i + 2) * sizeof(uint16_t));
 #endif
           }
           g->n_ind += n_ind;
@@ -172,7 +172,7 @@ int hkx_write_obj(const char *filename, struct HKX_GEOMETRY *g)
 
   fprintf(f, "# %u vertices\n", g->n_vtx);
   for (uint32_t i = 0; i < g->n_vtx; i++)
-    fprintf(f, "v %f %f %f\n", g->vtx[3*i + 0], g->vtx[3*i + 1], g->vtx[3*i + 2]);
+    fprintf(f, "v %f %f %f\n", g->vtx[3*i + 0], g->vtx[3*i + 1], -g->vtx[3*i + 2]);
 
   fprintf(f, "\n");
 
