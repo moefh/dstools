@@ -30,6 +30,11 @@ void reader_from_file(struct READER *r, FILE *f);
 void reader_from_memory(struct READER *r, const void *data, size_t size);
 
 
+static inline uint8_t get_u8(const void *p, size_t offset)
+{
+  return ((unsigned char *) p)[offset];
+}
+
 static inline uint32_t get_u32_be(const void *p, size_t offset)
 {
   unsigned char *d = (unsigned char *) p + offset;
@@ -59,6 +64,18 @@ static inline float get_f32(const void *p, size_t offset)
   float ret;
   memcpy(&ret, (char *) p + offset, 4);
   return ret;
+}
+
+static inline uint32_t get_packed(const void *restrict p, size_t *restrict offset)
+{
+  unsigned char *d = (unsigned char *) p + *offset;
+
+  if ((d[0] & 0x80) == 0) {
+    *offset += 1;
+    return d[0] & 0x7f;
+  }
+  *offset += 2;
+  return (d[0] << 8 | d[1]) & 0x3fff;
 }
 
 #endif /* READER_H_FILE */

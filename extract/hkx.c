@@ -8,9 +8,9 @@
 #include "hkx.h"
 #include "reader.h"
 
-#define HKX_TYPE_MAT 0x1000004b
-#define HKX_TYPE_VTX 0x20000016
-#define HKX_TYPE_IND 0x2000000d
+#define HKX_TYPE_BODY 0x00004b
+#define HKX_TYPE_VTX  0x000016
+#define HKX_TYPE_IND  0x00000d
 
 #define REALLOC_CHUNK_SIZE 16384
 #define REMOVE_INVALID_TRIANGLES 1
@@ -104,13 +104,13 @@ int hkx_read_geometry(struct HKX_GEOMETRY *restrict g, const void *restrict data
     char *magic = (char *) data + off + 4;
     if (memcmp(magic, "ITEM", 4) == 0) {
       for (uint32_t item = 0; 8 + 12*(item+1) <= chunk_size; item++) {
-        uint32_t item_type  = get_u32_le(data, off + 8 + 12*item + 0);
+        uint32_t item_type  = get_u32_le(data, off + 8 + 12*item + 0) & 0x00ffffff;
         uint32_t item_off   = get_u32_le(data, off + 8 + 12*item + 4);
         uint32_t item_count = get_u32_le(data, off + 8 + 12*item + 8);
         uint32_t n_ind = 0;
         
         switch (item_type) {
-        case HKX_TYPE_MAT:
+        case HKX_TYPE_BODY:
           memcpy(mat, (char *) data + data_off + item_off + 0x170, 16 * sizeof(float));
           break;
           

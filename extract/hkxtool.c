@@ -52,13 +52,59 @@ static void dump_index(void *data, size_t size)
   uint32_t off = 0;
   while (off < size) {
     uint32_t chunk_size = get_u32_be(data, off) & 0x00ffffff;
-    if (memcmp((char *) data + off + 4, "ITEM", 4) == 0) {
+    char *magic = (char *) data + off + 4;
+    void *content = (char *) data + off + 8;
+    uint32_t content_size = chunk_size - 8;
+    if (memcmp(magic, "ITEM", 4) == 0) {
       printf("type     offset   count\n");
-      for (uint32_t item = 0; 8 + 12*(item+1) <= chunk_size; item++) {
-        uint32_t item_type  = get_u32_le(data, off + 8 + 12*item + 0);
-        uint32_t item_off   = get_u32_le(data, off + 8 + 12*item + 4);
-        uint32_t item_count = get_u32_le(data, off + 8 + 12*item + 8);
-        printf("%08x %08x %08x\n", item_type, item_off, item_count);
+      for (uint32_t item = 0; 12*(item+1) <= content_size; item++) {
+        uint32_t item_type  = get_u32_le(content, 12*item + 0) & 0x00ffffff;
+        uint32_t item_off   = get_u32_le(content, 12*item + 4);
+        uint32_t item_count = get_u32_le(content, 12*item + 8);
+        printf("[%06x] %08x %08x\n", item_type, item_off, item_count);
+      }
+    }
+    off += chunk_size;
+  }
+}
+
+static void dump_type(void *data, size_t size)
+{
+  char *type_names[256] = { NULL };
+  
+  uint32_t off = 0;
+  while (off < size) {
+    uint32_t chunk_size = get_u32_be(data, off) & 0x00ffffff;
+    char *magic = (char *) data + off + 4;
+    void *content = (char *) data + off + 8;
+    uint32_t content_size = chunk_size - 8;
+    if (memcmp(magic, "TSTR", 4) == 0) {
+      printf("\nTSTR:\n");
+      uint32_t id = 0;
+      char *name = content;
+      while (name - (char *) content < content_size) {
+        if (name[0] != '\0')
+          printf("  %06x %s\n", id, name);
+        if (id < sizeof(type_names)/sizeof(type_names[0]))
+          type_names[id++] = name;
+        name += strlen(name) + 1;
+      }
+    } else if (memcmp(magic, "TNAM", 4) == 0) {
+      printf("\nTNAM:\n");
+      size_t offset = 0;
+      uint32_t num_types = get_packed(content, &offset);
+      for (uint32_t type_num = 1; type_num < num_types; type_num++) {
+        uint32_t type_name = get_packed(content, &offset);
+        uint32_t num_vals = get_packed(content, &offset);
+        printf("[%06x] %08x (%s)\n",
+               type_num,
+               type_name,
+               (type_name < sizeof(type_names)/sizeof(type_names[0])) ? type_names[type_name] : "?");
+        for (uint32_t val_i = 0; val_i < num_vals; val_i++) {
+          uint32_t t_nam = get_packed(content, &offset);
+          uint32_t t_val = get_packed(content, &offset);
+          printf("    %08x -> %08x\n", t_nam, t_val);
+        }
       }
     }
     off += chunk_size;
@@ -75,12 +121,17 @@ static void dump_hkx(void *data, size_t size, const char *filename)
   
   while (off < size) {
     uint32_t chunk_size = get_u32_be(data, off) & 0x00ffffff;
+    char *magic = (char *) data + off + 4;
+    void *content = (char *) data + off + 8;
+    uint32_t content_size = chunk_size - 8;
     printf("\n");
-    printf("%08x %.4s len=%u (0x%x)\n", off, (char *) data + off + 4, chunk_size - 8, chunk_size - 8);
-    dump_mem((char *) data + off + 8, chunk_size - 8, off + 8);
+    printf("%08x %.4s len=%u (0x%x)\n", off, magic, content_size, content_size);
+    dump_mem(content, content_size, off + 8);
 
-    if (memcmp((char *) data + off + 4, "INDX", 4) == 0) {
-      dump_index(data + off + 8, chunk_size - 8);
+    if (memcmp(magic, "INDX", 4) == 0) {
+      dump_index(content, content_size);
+    } else if (memcmp(magic, "TYPE", 4) == 0) {
+      dump_type(content, content_size);
     }
     
     off += chunk_size;
