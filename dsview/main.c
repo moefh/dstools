@@ -1,5 +1,6 @@
 /* main.c */
 
+#include <string.h>
 #include <math.h>
 
 #include <glad/glad.h>
