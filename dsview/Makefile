@@ -1,11 +1,11 @@
 
 ifeq ($(OS),Windows_NT)
 OS_CFLAGS = -I$(DEVROOT)/include
-OS_LDLAGS = -w -Wl,-subsystem,windows
+OS_LDFLAGS = -w -Wl,-subsystem,windows
 OS_LIBS = -L$(DEVROOT)/lib -lglfw3 -lgdi32 -lopengl32
 else
 OS_CFLAGS =
-OS_LDLAGS =
+OS_LDFLAGS =
 OS_LIBS = -lglfw -lGL -ldl
 endif
 
