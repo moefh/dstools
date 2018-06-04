@@ -203,6 +203,7 @@ int main(int argc, char *argv[])
 
     free_model(&model);
   }
+  dir_free_files(model_files);
   
   return 0;
 }
