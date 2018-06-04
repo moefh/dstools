@@ -1,16 +1,24 @@
 
-CC = gcc
-#CFLAGS = -fsanitize=address -g -Wall -Wextra -Wno-missing-field-initializers -Wno-unused-parameter -Wno-cast-function-type -I$(DEVROOT)/include
-#LDFLAGS = -fsanitize=address
-CFLAGS = -O2 -Wall -Wextra -Wno-missing-field-initializers -Wno-unused-parameter -Wno-cast-function-type -I$(DEVROOT)/include
-LDFLAGS =
+ifeq ($(OS),Windows_NT)
+OS_CFLAGS = -I$(DEVROOT)/include
+OS_LDFLAGS = 
+OS_LIBS = -L$(DEVROOT)/lib
+else
+OS_CFLAGS = -fsanitize=address
+OS_LDFLAGS = -fsanitize=address
+OS_LIBS =
+endif
 
-LIBS = -L$(DEVROOT)/lib -lz
+CC = gcc
+CFLAGS = $(OS_CFLAGS) -O2 -Wall -Wextra -Wno-missing-field-initializers -Wno-unused-parameter -Wno-cast-function-type
+LDFLAGS = $(OS_LDFLAGS)
+
+LIBS = $(OS_LIBS) -lz -lm
 
 all: dcxtool bndtool bhdtool hkxtool dump_nvm
 
 clean:
-	-rm -f *.o *.exe
+	-rm -f *.o
 	-rm -f dcxtool bndtool bhdtool hkxtool dump_nvm
 
 dcxtool: dcxtool.o dcx.o reader.o

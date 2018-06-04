@@ -1,17 +1,25 @@
 
+ifeq ($(OS),Windows_NT)
+OS_CFLAGS = -I$(DEVROOT)/include
+OS_LDLAGS = -w -Wl,-subsystem,windows
+OS_LIBS = -L$(DEVROOT)/lib -lglfw3 -lgdi32 -lopengl32
+else
+OS_CFLAGS =
+OS_LDLAGS =
+OS_LIBS = -lglfw -lGL -ldl
+endif
+
 CC = gcc
-CFLAGS = -O2 -Wall -Wextra -Wno-missing-field-initializers -Wno-unused-parameter -Wno-cast-function-type -I$(DEVROOT)/include -I.
-LDFLAGS = -w -Wl,-subsystem,windows
-#LDFLAGS = 
+CFLAGS = $(OS_CFLAGS) -O2 -Wall -Wextra -Wno-missing-field-initializers -Wno-unused-parameter -Wno-cast-function-type -I.
+LDFLAGS = $(OS_LDFLAGS)
 
 OBJS = main.o debug.o gl_error.o matrix.o dir.o shader.o model.o mouse_camera.o key_camera.o glad.o
-LIBS = -L$(DEVROOT)/lib -lglfw3 -lgdi32 -lopengl32 -lm
-#LIBS = -lglfw -lGL -ldl -lm
+LIBS = $(OS_LIBS) -lm
 
 all: dsview
 
 clean:
-	-rm -f *.o *.exe
+	-rm -f *.o
 	-rm -f dsview
 
 dsview: $(OBJS)
