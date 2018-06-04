@@ -403,11 +403,19 @@ static int handle_events(void)
   return glfwWindowShouldClose(window);
 }
 
+static void error_callback(int error, const char *description)
+{
+  debug("* ERROR: %s\n", description);
+}
+
 static int init_gfx(void)
 {
   debug("  - Initializing GLFW...\n");
-  if (! glfwInit())
+  if (! glfwInit()) {
+    debug("* ERROR: can't initialize GLFW\n");
     return -1;
+  }
+  glfwSetErrorCallback(error_callback);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
