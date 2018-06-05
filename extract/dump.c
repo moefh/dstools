@@ -13,11 +13,16 @@ static void dump_line(const uint8_t *data, uint32_t len, uint32_t addr, uint32_t
   if (len > 16)
     len = 16;
   for (uint32_t i = 0; i < len; i++) {
+    if (i == 8)
+      printf(" ");
     printf("%02x ", data[i]);
-    str[i] = (data[i] >= 32 && data[i] < 127) ? data[i] : '.';
+    str[i] = (data[i] > 32 && data[i] < 127) ? data[i] : '.';
   }
-  for (uint32_t i = len; i < 16; i++)
+  for (uint32_t i = len; i < 16; i++) {
+    if (i == 8)
+      printf(" ");
     printf("   ");
+  }
 
   printf("| %.*s", len, str);
   for (uint32_t i = len; i < 16; i++)
