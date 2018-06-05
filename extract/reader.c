@@ -70,7 +70,7 @@ static size_t mem_read(union READER_DATA *reader, void *data, size_t size)
 
   if (size > mem->size - mem->pos)
     size = mem->size - mem->pos;
-  memcpy(data, mem->data + mem->pos, size);
+  memcpy(data, (char *) mem->data + mem->pos, size);
   mem->pos += size;
   return size;
 }

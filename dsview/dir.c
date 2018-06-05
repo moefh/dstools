@@ -3,16 +3,18 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <strings.h>
 
 #include "dir.h"
-#include "debug.h"
 
 typedef int (*find_callback)(const char *filename, void *data);
 
-#ifdef xxxWIN32
+#ifdef _MSC_VER
 
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+
+#define strncasecmp _strnicmp
+#define strcasecmp _stricmp
 
 static int find_files(const char *dir, const char *ext, find_callback callback_func, void *callback_data)
 {
@@ -39,6 +41,7 @@ static int find_files(const char *dir, const char *ext, find_callback callback_f
 
 #else
 
+#include <strings.h>
 #include <dirent.h>
 
 static int find_files(const char *dir, const char *ext, find_callback callback_func, void *callback_data)
@@ -129,3 +132,17 @@ void dir_free_files(char **files)
   free(files);
 }
 
+char *get_path_filename(char *path)
+{
+  char *p;
+
+  p = strrchr(path, '/');
+  if (p)
+    path = p+1;
+
+  p = strrchr(path, '\\');
+  if (p)
+    path = p+1;
+
+  return path;
+}
