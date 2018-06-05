@@ -1,4 +1,4 @@
-/* dump_hkx.c */
+/* hkxtool.c */
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -8,7 +8,6 @@
 #include "dcx.h"
 #include "hkx.h"
 #include "reader.h"
-#include "dump.h"
 #include "util.h"
 
 #define MODE_LIST     0
@@ -40,107 +39,6 @@ static int write_geometry(const char *in_filename, struct HKX_GEOMETRY *g)
   return ret;
 }
 
-static void extract_file(void *data, size_t size, const char *filename, struct HKX_GEOMETRY *g)
-{
-  if (hkx_read_geometry(g, data, size) != 0)
-    printf("OUT OF MEMORY for geometry\n");
-}
-
-static void dump_index(void *data, size_t size)
-{
-  printf("\nItems in index:\n");
-  uint32_t off = 0;
-  while (off < size) {
-    uint32_t chunk_size = get_u32_be(data, off) & 0x00ffffff;
-    char *magic = (char *) data + off + 4;
-    void *content = (char *) data + off + 8;
-    uint32_t content_size = chunk_size - 8;
-    if (memcmp(magic, "ITEM", 4) == 0) {
-      printf("type     offset   count\n");
-      for (uint32_t item = 0; 12*(item+1) <= content_size; item++) {
-        uint32_t item_type  = get_u32_le(content, 12*item + 0) & 0x00ffffff;
-        uint32_t item_off   = get_u32_le(content, 12*item + 4);
-        uint32_t item_count = get_u32_le(content, 12*item + 8);
-        printf("[%06x] %08x %08x\n", item_type, item_off, item_count);
-      }
-    }
-    off += chunk_size;
-  }
-}
-
-static void dump_type(void *data, size_t size)
-{
-  char *type_names[256] = { NULL };
-  
-  uint32_t off = 0;
-  while (off < size) {
-    uint32_t chunk_size = get_u32_be(data, off) & 0x00ffffff;
-    char *magic = (char *) data + off + 4;
-    void *content = (char *) data + off + 8;
-    uint32_t content_size = chunk_size - 8;
-    if (memcmp(magic, "TSTR", 4) == 0) {
-      printf("\nTSTR:\n");
-      uint32_t id = 0;
-      char *name = content;
-      while (name - (char *) content < content_size) {
-        if (name[0] != '\0')
-          printf("  %06x %s\n", id, name);
-        if (id < sizeof(type_names)/sizeof(type_names[0]))
-          type_names[id++] = name;
-        name += strlen(name) + 1;
-      }
-    } else if (memcmp(magic, "TNAM", 4) == 0) {
-      printf("\nTNAM:\n");
-      size_t offset = 0;
-      uint32_t num_types = get_packed(content, &offset);
-      for (uint32_t type_num = 1; type_num < num_types; type_num++) {
-        uint32_t type_name = get_packed(content, &offset);
-        uint32_t num_vals = get_packed(content, &offset);
-        printf("[%06x] %08x (%s)\n",
-               type_num,
-               type_name,
-               (type_name < sizeof(type_names)/sizeof(type_names[0])) ? type_names[type_name] : "?");
-        for (uint32_t val_i = 0; val_i < num_vals; val_i++) {
-          uint32_t t_nam = get_packed(content, &offset);
-          uint32_t t_val = get_packed(content, &offset);
-          printf("    %08x -> %08x\n", t_nam, t_val);
-        }
-      }
-    }
-    off += chunk_size;
-  }
-}
-
-static void dump_hkx(void *data, size_t size, const char *filename)
-{
-  uint32_t off = 8;
-
-  printf("=============================================================================\n");
-  printf("== %s\n", filename);
-  printf("=============================================================================\n");
-  
-  while (off < size) {
-    uint32_t chunk_size = get_u32_be(data, off) & 0x00ffffff;
-    char *magic = (char *) data + off + 4;
-    void *content = (char *) data + off + 8;
-    uint32_t content_size = chunk_size - 8;
-    printf("\n");
-    printf("%08x %.4s len=%u (0x%x)\n", off, magic, content_size, content_size);
-    dump_mem(content, content_size, off + 8);
-
-    if (memcmp(magic, "INDX", 4) == 0) {
-      dump_index(content, content_size);
-    } else if (memcmp(magic, "TYPE", 4) == 0) {
-      dump_type(content, content_size);
-    }
-    
-    off += chunk_size;
-  }
-  if (off != size)
-    printf("warning: off != size (0x%08x != 0x%08x)\n", off, (uint32_t) size);
-  printf("\n");
-}
-
 static int process_hkx(void *data, size_t size, const char *filename, int mode, struct HKX_GEOMETRY *g)
 {
   switch (mode) {
@@ -149,11 +47,17 @@ static int process_hkx(void *data, size_t size, const char *filename, int mode, 
     return 0;
     
   case MODE_EXTRACT:
-    extract_file(data, size, filename, g);
+    if (hkx_read_geometry(g, data, size) != 0) {
+      printf("OUT OF MEMORY for geometry\n");
+      return 1;
+    }
     return 0;
     
   case MODE_DUMP:
-    dump_hkx(data, size, filename);
+    printf("=============================================================================\n");
+    printf("== %s\n", filename);
+    printf("=============================================================================\n");
+    hkx_dump(data, size);
     return 0;
   }
   return 1;
@@ -182,7 +86,9 @@ static int process_single_file(const char *filename, int mode)
   struct HKX_GEOMETRY g;
   hkx_init_geometry(&g);
   process_hkx(data, size, filename, mode, &g);
-  int ret = write_geometry(filename, &g);
+  int ret = 0;
+  if (mode == MODE_EXTRACT)
+    ret = write_geometry(filename, &g);
   hkx_free_geometry(&g);
   
   free(data);
@@ -215,7 +121,9 @@ static int process_bhd(const char *filename, int mode)
     }
   }
   
-  int ret = write_geometry(filename, &g);
+  int ret = 0;
+  if (mode == MODE_EXTRACT)
+    ret = write_geometry(filename, &g);
   hkx_free_geometry(&g);
   bhd_close(&f);
   return ret;

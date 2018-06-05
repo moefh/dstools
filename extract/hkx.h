@@ -16,5 +16,6 @@ void hkx_init_geometry(struct HKX_GEOMETRY *g);
 void hkx_free_geometry(struct HKX_GEOMETRY *g);
 int hkx_read_geometry(struct HKX_GEOMETRY *restrict g, const void *restrict data, size_t size);
 int hkx_write_obj(const char *filename, struct HKX_GEOMETRY *g);
+void hkx_dump(void *data, size_t size);
 
 #endif /* HKX_H_FILE */
