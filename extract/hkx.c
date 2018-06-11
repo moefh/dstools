@@ -436,3 +436,176 @@ void hkx_dump(void *data, size_t size)
     printf("warning: off != size (0x%08x != 0x%08x)\n", off, (uint32_t) size);
   printf("\n");
 }
+
+/* =======================================================================
+ * READ
+ * =======================================================================
+ */
+
+static void hkx_init(struct HKX_FILE *hkx)
+{
+  hkx->n_type_names = hkx->alloc_type_names = 0;
+  hkx->type_names = NULL;
+
+  hkx->n_field_names = hkx->alloc_field_names = 0;
+  hkx->field_names = NULL;
+    
+  hkx->n_types = hkx->alloc_types = 0;
+  hkx->types = NULL;
+
+  hkx->n_members = hkx->alloc_members = 0;
+  hkx->members = NULL;
+
+  hkx->n_interfaces = hkx->alloc_interfaces = 0;
+  hkx->interfaces = NULL;
+
+  hkx->n_objects = hkx->alloc_objects = 0;
+  hkx->objects = NULL;
+}
+
+void hkx_free(struct HKX_FILE *hkx)
+{
+  free(hkx->type_names);
+  free(hkx->field_names);
+  free(hkx->types);
+  free(hkx->members);
+  free(hkx->interfaces);
+  free(hkx->objects);
+}
+
+#define MAKE_ALLOCATOR(name, type) \
+static type *new_##name(struct HKX_FILE *hkx)                           \
+{                                                                       \
+  if (hkx->n_##name##s + 1 >= hkx->alloc_##name##s) {                   \
+    size_t n = hkx->alloc_##name##s ? 2*hkx->alloc_##name##s : 32;      \
+    void *p = realloc(hkx->name##s, n * sizeof(type));                  \
+    if (! p) return NULL;                                               \
+    hkx->name##s = p;                                                   \
+    hkx->alloc_##name##s = n;                                           \
+  }                                                                     \
+  return &hkx->name##s[hkx->n_##name##s++];                             \
+}
+
+MAKE_ALLOCATOR(type_name, char *)
+MAKE_ALLOCATOR(field_name, char *)
+//MAKE_ALLOCATOR(type, struct HKX_TYPE)
+//MAKE_ALLOCATOR(member, struct HKX_MEMBER)
+//MAKE_ALLOCATOR(interface, struct HKX_INTERFACE)
+MAKE_ALLOCATOR(object, struct HKX_OBJECT)
+
+static int read_type_names(struct HKX_FILE *hkx, void *data, size_t size)
+{
+  char *name = data;
+  while (name - (char *) data < (ptrdiff_t) size) {
+    char **new_name = new_type_name(hkx);
+    *new_name = name;
+    name += strlen(name) + 1;
+  }
+  return 0;
+}
+
+static int read_field_names(struct HKX_FILE *hkx, void *data, size_t size)
+{
+  char *name = data;
+  while (name - (char *) data < (ptrdiff_t) size) {
+    char **new_name = new_field_name(hkx);
+    *new_name = name;
+    name += strlen(name) + 1;
+  }
+  return 0;
+}
+
+static int read_types(struct HKX_FILE *hkx, void *data, size_t size)
+{
+  uint32_t off = 0;
+  while (off < size) {
+    uint32_t chunk_size = get_u32_be(data, off) & 0x00ffffff;
+    char *magic = (char *) data + off + 4;
+    void *content = (char *) data + off + 8;
+    uint32_t content_size = chunk_size - 8;
+
+    if (memcmp(magic, "TSTR", 4) == 0) {
+      if (read_type_names(hkx, content, content_size) != 0)
+        return 1;
+    } else if (memcmp(magic, "TNAM", 4) == 0) {
+      // TODO
+    } else if (memcmp(magic, "FSTR", 4) == 0) {
+      if (read_field_names(hkx, content, content_size) != 0)
+        return 1;
+    } else if (memcmp(magic, "TBOD", 4) == 0) {
+      // TODO
+    }
+    off += chunk_size;
+  }
+  return 0;
+}
+
+static int read_index(struct HKX_FILE *hkx, void *data, size_t size, void *data_off)
+{
+  uint32_t off = 0;
+  while (off < size) {
+    uint32_t chunk_size = get_u32_be(data, off) & 0x00ffffff;
+    char *magic = (char *) data + off + 4;
+    void *content = (char *) data + off + 8;
+    uint32_t content_size = chunk_size - 8;
+    if (memcmp(magic, "ITEM", 4) == 0) {
+      for (uint32_t item = 0; 12*(item+1) <= content_size; item++) {
+        uint32_t item_type  = get_u32_le(content, 12*item + 0) & 0x00ffffff;
+        uint32_t item_off   = get_u32_le(content, 12*item + 4);
+        uint32_t item_count = get_u32_le(content, 12*item + 8);
+
+        if (item_type >= hkx->n_types) {
+          printf("bad item type: %x\n", item_type);
+          return 1;
+        }
+        
+        struct HKX_OBJECT *obj = new_object(hkx);
+        if (! obj)
+          return 1;
+        obj->type = item_type;
+        obj->value = (char *) data_off + item_off;
+        obj->count = item_count;
+      }
+    }
+    off += chunk_size;
+  }
+  return 0;
+}
+
+int hkx_read(struct HKX_FILE *hkx, void *data, size_t size)
+{
+  hkx_init(hkx);
+  
+  uint32_t off = 8;
+  void *data_off = NULL;
+  while (off < size) {
+    uint32_t chunk_size = get_u32_be(data, off) & 0x00ffffff;
+    char *magic = (char *) data + off + 4;
+    void *content = (char *) data + off + 8;
+    uint32_t content_size = chunk_size - 8;
+
+    if (memcmp(magic, "DATA", 4) == 0) {
+      data_off = content;
+    } else if (memcmp(magic, "TYPE", 4) == 0) {
+      if (read_types(hkx, content, content_size) != 0)
+        goto error;
+    } else if (memcmp(magic, "INDX", 4) == 0) {
+      if (! data_off)
+        goto error;
+      if (! hkx->types)
+        goto error;
+      if (read_index(hkx, content, content_size, data_off) != 0)
+        goto error;
+    }
+    
+    off += chunk_size;
+  }
+
+  if (! hkx->types || ! hkx->objects)
+    goto error;
+  return 0;
+  
+ error:
+  hkx_free(hkx);
+  return 1;
+}

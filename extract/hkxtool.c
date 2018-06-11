@@ -13,6 +13,7 @@
 #define MODE_LIST     0
 #define MODE_EXTRACT  1
 #define MODE_DUMP     2
+#define MODE_READ     3
 
 static int write_geometry(const char *in_filename, struct HKX_GEOMETRY *g)
 {
@@ -45,7 +46,17 @@ static int process_hkx(void *data, size_t size, const char *filename, int mode, 
   case MODE_LIST:
     printf("%8lu %s\n", (unsigned long) size, filename);
     return 0;
-    
+
+  case MODE_READ:
+    {
+      struct HKX_FILE hkx;
+      if (hkx_read(&hkx, data, size) != 0)
+        return 1;
+      // TODO
+      hkx_free(&hkx);
+    }
+    return 0;
+
   case MODE_EXTRACT:
     if (hkx_read_geometry(g, data, size) != 0) {
       printf("OUT OF MEMORY for geometry\n");
@@ -140,6 +151,7 @@ static int read_cmdline(int argc, char *argv[])
     printf("Use one of these commands:\n");
     printf("  l    list files\n");
     printf("  d    dump files (hexdump)\n");
+    printf("  r    read files\n");
     printf("  x    extract geometry from files\n");
     exit(1);
   }
@@ -150,6 +162,7 @@ static int read_cmdline(int argc, char *argv[])
     case 'x': mode = MODE_EXTRACT; break;
     case 'l': mode = MODE_LIST; break;
     case 'd': mode = MODE_DUMP; break;
+    case 'r': mode = MODE_READ; break;
     default:
       printf("Invalid command: '%c'\n", *p);
       exit(1);
